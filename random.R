@@ -8,6 +8,7 @@
 ###################################################
 
 library(dplyr)
+library(survey)
 library(foreign)    # For converting *.dta
 
 
@@ -49,6 +50,7 @@ hh_98.df <- mutate(hh_98.df, lexptot = log(1 + exptot)) %>%
 
 # Regression Implementation
 
+  des1 <- svydesign(id = ~X,  weights = ~weight, data = hh_98.df)
 
   prog_place_1.lm <- lm(lexptot ~ progvillm, data = hh_98.df)
   summary(prog_place_1.lm)
@@ -56,13 +58,14 @@ hh_98.df <- mutate(hh_98.df, lexptot = log(1 + exptot)) %>%
   prog_place_2.lm <- lm(lexptot ~ progvillf, data = hh_98.df)
   summary(prog_place_2.lm)
 
-  prog_place_3.lm <- lm(lexptot ~ progvillm + sexhead + agehead + educhead + lnland + vaccess + 
-                        pcirr + rice + wheat + milk + oil + egg, data = hh_98.df, weight = weight)
-  summary(prog_place_3.lm)
+  prog_place_3.svyglm <- svyglm(lexptot ~ progvillm + sexhead + agehead + educhead + lnland + vaccess + 
+                        pcirr + rice + wheat + milk + oil + egg, design = des1)
+  
+  summary(prog_place_3.svyglm)
 
-  prog_place_4.lm <- lm(lexptot ~ progvillf + sexhead + agehead + educhead + lnland + vaccess + 
-                        pcirr + rice + wheat + milk + oil + egg, data = hh_98.df, weight = weight)
-  summary(prog_place_4.lm)
+  prog_place_4.svyglm <- svyglm(lexptot ~ progvillf + sexhead + agehead + educhead + lnland + vaccess + 
+                        pcirr + rice + wheat + milk + oil + egg, design = des1)
+  summary(prog_place_4.svyglm)
 
 
 ###################################
@@ -86,63 +89,78 @@ hh_98.df <- mutate(hh_98.df, lexptot = log(1 + exptot)) %>%
   prog_part_2.lm <- lm(lexptot ~ dfmfd, data = hh_98.df)
   summary(prog_part_2.lm)
   
-  prog_part_3.lm <- lm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                          pcirr + rice + wheat + milk + oil + egg, data = hh_98.df, weight = weight)
-  summary(prog_part_3.lm)
+  prog_part_3.svyglm <- svyglm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
+                          pcirr + rice + wheat + milk + oil + egg, design = des1)
+  summary(prog_part_3.svyglm)
   
-  prog_part_4.lm <- lm(lexptot ~ dfmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                          pcirr + rice + wheat + milk + oil + egg, data = hh_98.df, weight = weight)
-  summary(prog_part_4.lm)
+  prog_part_4.svyglm <- svyglm(lexptot ~ dfmfd + sexhead + agehead + educhead + lnland + vaccess + 
+                          pcirr + rice + wheat + milk + oil + egg, design = des1)
+  summary(prog_part_4.svyglm)
 
 # Expanded regression: capturing both program placement and participation
 
-  prog_place_part_1.lm <- lm(lexptot ~ dmmfd + progvillm + sexhead + agehead + educhead +
+  prog_place_part_1.svyglm <- svyglm(lexptot ~ dmmfd + progvillm + sexhead + agehead + educhead +
                                lnland + vaccess + pcirr + rice + wheat + milk + oil + egg, 
-                             data = hh_98.df, weight = weight) 
+                               design = des1) 
 
-  summary(prog_place_part_1.lm)
+  summary(prog_place_part_1.svyglm)
   
-  prog_place_part_2.lm <- lm(lexptot ~ dfmfd + progvillm + sexhead + agehead + educhead +
+  prog_place_part_2.svyglm <- svyglm(lexptot ~ dfmfd + progvillm + sexhead + agehead + educhead +
                              lnland + vaccess + pcirr + rice + wheat + milk + oil + egg, 
-                           data = hh_98.df, weight = weight) 
+                             design = des1) 
 
-  summary(prog_place_part_2.lm)
+  summary(prog_place_part_2.svyglm)
 
-# Impacts of program participation in program villages
+### Impacts of program participation in program villages
+
+# Fit Design Survey
 
   progvill_1 <- filter(hh_98.df, progvillm == 1)
-  progvill_1.lm <- lm(lexptot ~ dmmfd, data = progvill_1, weight = weight)
-  summary(progvill_1.lm)
+  des2 <- svydesign(id = ~X,  weights = ~weight, data = progvill_1)
 
   progvill_2 <- filter(hh_98.df, progvillf == 1)
-  progvill_2.lm <- lm(lexptot ~ dmmfd, data = progvill_2, weight = weight)
+  des3 <- svydesign(id = ~X, weights = ~weight, data = progvill_2)
+
+# Regressions
+  progvill_1.lm <- lm(lexptot ~ dmmfd, data = progvill_1)
+  summary(progvill_1.lm)
+
+  progvill_2.lm <- lm(lexptot ~ dmmfd, data = progvill_2)
   summary(progvill_2.lm)
 
-  progvill_3 <- lm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                     pcirr + rice + wheat + milk + oil + egg, data = progvill_1, weight = weight)
-  summary(progvill_2)
+  progvill_3.svyglm <- svyglm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
+                     pcirr + rice + wheat + milk + oil + egg, design = des2)
+  summary(progvill_3.svyglm)
 
 
-  progvill_4 <- lm(lexptot ~ dfmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                   pcirr + rice + wheat + milk + oil + egg, data = progvill_2, weight = weight)
+  progvill_4.svyglm <- svyglm(lexptot ~ dfmfd + sexhead + agehead + educhead + lnland + vaccess + 
+                   pcirr + rice + wheat + milk + oil + egg, design = des3)
+  summary(progvill_4.svyglm)
+
+
 
 # Spillover effects of program placement
 
   progplace_1 <- filter(hh_98.df, dmmfd == 0)
-  progplace_1.lm <- lm(lexptot ~ progvillm, data = progplace_1, weight = weight)
+  des4 <- svydesign(id = ~X,  weights = ~weight, data = progplace_1)
+  
+  progplace_2 <- filter(hh_98.df, dfmfd == 0)
+  des5 <- svydesign(id = ~X,  weights = ~weight, data = progplace_2)
+
+  progplace_1.lm <- lm(lexptot ~ progvillm, data = progplace_1)
   summary(progplace_1.lm)
 
-  progplace_2 <- filter(hh_98.df, dfmfd == 0)
-  progplace_2.lm <- lm(lexptot ~ progvillf, data = progplace_2, weight = weight)
+  progplace_2.lm <- svyglm(lexptot ~ progvillf, design = des5)
   summary(progplace_2.lm)
   
-  progplace_3.lm <- lm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                        pcirr + rice + wheat + milk + oil + egg, data = progplace_1, weight = weight)
-  summary(progplace_3.lm)
+  progplace_3.svyglm <- svyglm(lexptot ~ progvillm + sexhead + agehead + educhead + lnland + vaccess + 
+                        pcirr + rice + wheat + milk + oil + egg, design = des4)
+  summary(progplace_3.svyglm)
 
-  progplace_4.lm <- lm(lexptot ~ dmmfd + sexhead + agehead + educhead + lnland + vaccess + 
-                         pcirr + rice + wheat + milk + oil + egg, data = progplace_2, weight = weight)
-  summary(progplace_3.lm)
+  progplace_4.svyglm <- svyglm(lexptot ~ progvillf + sexhead + agehead + educhead + lnland + vaccess + 
+                         pcirr + rice + wheat + milk + oil + egg, design = des5)
+  summary(progplace_4.svyglm)
+
 
 
 ################
