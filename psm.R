@@ -55,10 +55,16 @@ summary(m.out)
 
 MatchBalance(dmmfd ~ sexhead + agehead + educhead + lnland + vaccess + pcirr + rice + wheat + milk + oil + egg, data = hh_98.df, nboots = 500, ks = TRUE)
 
+fit <- prog.lm$data
+fit$fvalues <- prog.lm$fitted.values 
+
+fit.control <- filter(fit, dmmfd == 0)
+fit.treated <- filter(fit, dmmfd == 1)
+
 ggplot() + 
-  geom_density(aes(x=m.out$index.control, linetype = '2')) +
-  geom_density(aes(x=m.out$index.treated, linetype = '3')) +
-  xlim(-300,1500) +
+  geom_density(aes(x=fit.control$fvalues, linetype = '2')) +
+  geom_density(aes(x=fit.treated$fvalues, linetype = '3')) +
+  xlim(-.1,.6) +
   xlab("") +
   scale_linetype_discrete(name = "", labels = c("Control", "Treated")) +
   ggtitle("Control and Treated Densities")
@@ -76,10 +82,16 @@ Y <- hh_98.df$lexptot
 m.out <- Match(Tr = Tr, X = X, Y = Y, caliper = 0.001, M = 1, CommonSupport = TRUE)
 summary(m.out)
 
+fit <- prog.lm$data
+fit$fvalues <- prog.lm$fitted.values 
+
+fit.control <- filter(fit, dmmfd == 0)
+fit.treated <- filter(fit, dmmfd == 1)
+
 ggplot() + 
-  geom_density(aes(x=m.out$index.control, linetype = '2')) +
-  geom_density(aes(x=m.out$index.treated, linetype = '3')) +
-  xlim(-300,1500) +
+  geom_density(aes(x=fit.control$fvalues, linetype = '2')) +
+  geom_density(aes(x=fit.treated$fvalues, linetype = '3')) +
+  xlim(-.1,.6) +
   xlab("") +
   scale_linetype_discrete(name = "", labels = c("Control", "Treated")) +
   ggtitle("Control and Treated Densities")
