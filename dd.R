@@ -10,11 +10,9 @@
 
 library(dplyr)
 library(foreign)    # For converting *.dta
-library(Matching)
-library(MatchIt)
 library(ggplot2)
 library(survey)
-library(nonrandom)
+library(VIF)
 
 setwd("/home/john/Dropbox/UHM/Classes/Econ 610 - Economic Development/Problem Sets")
 
@@ -58,4 +56,31 @@ hh_9198.df <- mutate(hh_9198.df, dmmfdyr = dmmfd98*year)
 hh_9198.df <- mutate(hh_9198.df, dfmfdyr = dfmfd98*year)
 
 # Basic Model
+
+lm <- lm(lexptot ~ year + dfmfd98 + dfmfdyr, data = hh_9198.df)
+summary(lm)
+
+# Basic Model with FE on nh
+
+lm <- lm(lexptot ~ year + dfmfdyr + dfmfd98 + factor(nh), data = hh_9198.df)
+ 
+  #Check for multicolinearity
+  
+  sqrt(vif(lm))     #Error in vif.default(lm) : there are aliased coefficients in the model
+  
+  # Contains multicolinearity
+  check <- alias(lm)   # Notice that dfmfd98 = -1, therefore highly neg. correlated 
+
+  # Remove dfmfd98
+  lm <- lm(lexptot ~ year + dfmfdyr + factor(nh), data = hh_9198.df)
+  sqrt(vif(lm))
+  
+  # Output is fine now, so can proceed
+
+  # GVIF       Df GVIF^(1/(2*Df))
+  # year       1.453455  1.00000        1.205593
+  # dfmfdyr    1.764237  1.00000        1.328246
+  # factor(nh) 1.414214 28.72281        1.000210
+
+summary(lm)
 
