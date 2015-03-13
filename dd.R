@@ -13,6 +13,8 @@ library(foreign)    # For converting *.dta
 library(ggplot2)
 library(survey)
 library(VIF)
+library(plm)
+library(car)
 
 setwd("/home/john/Dropbox/UHM/Classes/Econ 610 - Economic Development/Problem Sets")
 
@@ -54,6 +56,7 @@ hh_9198.df <- group_by(hh_9198.df,nh) %>%
   mutate(dfmfd98 = max(dfmfd1))
 hh_9198.df <- mutate(hh_9198.df, dmmfdyr = dmmfd98*year)
 hh_9198.df <- mutate(hh_9198.df, dfmfdyr = dfmfd98*year)
+hh_9198.df <- ungroup(hh_9198.df)
 
 # Basic Model
 
@@ -63,13 +66,14 @@ summary(lm)
 # Basic Model with FE on nh
 
 lm <- lm(lexptot ~ year + dfmfdyr + dfmfd98 + factor(nh), data = hh_9198.df)
- 
+summary(lm)
+
   #Check for multicolinearity
   
   sqrt(vif(lm))     #Error in vif.default(lm) : there are aliased coefficients in the model
   
-  # Contains multicolinearity
-  check <- alias(lm)   # Notice that dfmfd98 = -1, therefore highly neg. correlated 
+  # Contains multicollinearity
+  check <- alias(lm)   # Notice that dfmfd98 = -1, therefore highly correlated with dfmfdyr
 
   # Remove dfmfd98
   lm <- lm(lexptot ~ year + dfmfdyr + factor(nh), data = hh_9198.df)
@@ -82,5 +86,22 @@ lm <- lm(lexptot ~ year + dfmfdyr + dfmfd98 + factor(nh), data = hh_9198.df)
   # dfmfdyr    1.764237  1.00000        1.328246
   # factor(nh) 1.414214 28.72281        1.000210
 
+  # Second method for testing for multicollinearity kappa()
+  test <- model.matrix(~ year + dfmfdyr + dfmfd98 + factor(nh), data = hh_9198.df)
+  kappa(test)   # Output : 2.017073e+16
+
+  #### Because of an extra large kappa, there is collinearity in our model and should be dealt with
+  
 summary(lm)
 
+# Using plm for fixed-effect
+
+lm <- plm(lexptot ~ year + dfmfdyr + dfmfd98 + nh, data = hh_9198.df, model = "within", index = "nh")
+summary(lm)
+
+
+# PSM with DD
+
+test <- select(hh_9198.df, lexptot, year, dfmfdyr, dfmfd98, nh)
+test2 <- head(test,10)
+dput(test2)
