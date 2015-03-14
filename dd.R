@@ -42,6 +42,7 @@ hh_9198.df <- subset(hh_9198.df, year == 1)
 hh_9198.df <- mutate(hh_9198.df, lexptot91=ifelse(year == 1, log(1+exptot91), 0))
 hh_9198.df <- mutate(hh_9198.df, lexptot98=ifelse(year == 1, log(1+exptot), 0))
 hh_9198.df <- mutate(hh_9198.df, lexptot9891 = lexptot98-lexptot91)
+hh_9198.df <- ungroup(hh_9198.df)
 
 # Regression Implementation
 hh_9198.df <- read.csv("Data/hh_9198.csv")
@@ -91,6 +92,7 @@ summary(lm)
   kappa(test)   # Output : 2.017073e+16
 
   #### Because of an extra large kappa, there is collinearity in our model and should be dealt with
+  #### conditional number must be less than 30
   
 summary(lm)
 
@@ -102,6 +104,3 @@ summary(lm)
 
 # PSM with DD
 
-test <- select(hh_9198.df, lexptot, year, dfmfdyr, dfmfd98, nh)
-test2 <- head(test,10)
-dput(test2)
