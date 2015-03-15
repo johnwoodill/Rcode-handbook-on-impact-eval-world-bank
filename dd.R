@@ -15,7 +15,6 @@ library(survey)
 library(VIF)
 library(plm)
 library(car)
-library(MatchIt)
 library(Matching)
 
 setwd("/home/john/Dropbox/UHM/Classes/Econ 610 - Economic Development/Problem Sets")
@@ -61,6 +60,11 @@ hh_9198.df <- mutate(hh_9198.df, dmmfdyr = dmmfd98*year)
 hh_9198.df <- mutate(hh_9198.df, dfmfdyr = dfmfd98*year)
 hh_9198.df <- ungroup(hh_9198.df)
 
+
+##############
+# Regression
+##############
+
 # Basic Model
 
 lm <- lm(lexptot ~ year + dfmfd98 + dfmfdyr, data = hh_9198.df)
@@ -103,10 +107,12 @@ summary(lm)
 lm <- plm(lexptot ~ year + dfmfdyr + dfmfd98 + nh, data = hh_9198.df, model = "within", index = "nh")
 summary(lm)
 
-
+###############
 # PSM with DD
+###############
 
 # Data setup
+
 hh_9198.df <- read.csv("Data/hh_9198.csv")
 hh_9198.df <- mutate(hh_9198.df, lnland = log(1 + hhland / 100))
 hh_9198.df <- mutate(hh_9198.df, dfmfd1=ifelse(dfmfd == 1 & year == 1, 1, 0))
@@ -180,4 +186,6 @@ psm_hh_9198.df$a_weight <- ifelse(psm_hh_9198.df$dfmfd == 0, psm_hh_9198.df$psm/
 
 lm <- lm(lexptot ~ year + dfmfd98 + dfmfdyr, data = psm_hh_9198.df, weights = a_weight)
 summary(lm)
+
+######### End of Script
 
