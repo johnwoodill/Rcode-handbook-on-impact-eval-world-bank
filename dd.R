@@ -61,9 +61,9 @@ hh_9198.df <- mutate(hh_9198.df, dfmfdyr = dfmfd98*year)
 hh_9198.df <- ungroup(hh_9198.df)
 
 
-##############
-# Regression
-##############
+###########################
+# Diff-in-Diff Regression
+###########################
 
 # Basic Model
 
