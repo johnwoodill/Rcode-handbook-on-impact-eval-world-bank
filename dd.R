@@ -15,6 +15,8 @@ library(survey)
 library(VIF)
 library(plm)
 library(car)
+library(MatchIt)
+library(Matching)
 
 setwd("/home/john/Dropbox/UHM/Classes/Econ 610 - Economic Development/Problem Sets")
 
@@ -103,4 +105,79 @@ summary(lm)
 
 
 # PSM with DD
+
+# Data setup
+hh_9198.df <- read.csv("Data/hh_9198.csv")
+hh_9198.df <- mutate(hh_9198.df, lnland = log(1 + hhland / 100))
+hh_9198.df <- mutate(hh_9198.df, dfmfd1=ifelse(dfmfd == 1 & year == 1, 1, 0))
+hh_9198.df <- group_by(hh_9198.df,nh) %>%
+  mutate(dfmfd98 = max(dfmfd1))
+hh_9198.df <- filter(hh_9198.df, year == 0)
+hh_9198.df$X <- 1:nrow(hh_9198.df)
+
+# First Regression (Unbalanced)
+
+des1 <- svydesign(id = ~X,  weights = ~weight, data = hh_9198.df)
+prog.lm <- svyglm(dfmfd98 ~ sexhead + agehead + educhead + lnland + vaccess + pcirr + rice + wheat + milk + oil, 
+                  design=des1, family = quasibinomial(link = "probit"))   
+
+X <- prog.lm$fitted
+Tr <- hh_9198.df$dfmfd
+
+m.out <- Match(Tr = Tr, X = X, caliper = 0.01)
+summary(m.out)
+
+MatchBalance(dfmfd98 ~ sexhead + agehead + educhead + lnland + vaccess + pcirr + rice + wheat + milk + oil, data = hh_9198.df, nboots = 1000)
+
+#Graph density of propensity scores
+fit <- prog.lm$data
+fit$fvalues <- prog.lm$fitted.values 
+
+fit.control <- filter(fit, dfmfd == 0)
+fit.treated <- filter(fit, dfmfd == 1)
+
+ggplot() + 
+  geom_density(aes(x=fit.control$fvalues, linetype = '2')) +
+  geom_density(aes(x=fit.treated$fvalues, linetype = '3')) +
+  xlim(-.3,1) +
+  xlab("") +
+  scale_linetype_discrete(name = "", labels = c("Control", "Treated")) +
+  ggtitle("Control and Treated Densities")
+
+
+# Build data frame with ps and nh, then drop ps not matched
+ps_dropped <- m.out$index.dropped
+ps_hh_9198.df <- data.frame(psm = prog.lm$fitted.values)
+ps_hh_9198.df$nh <- prog.lm$data$nh
+ps_hh_9198.df <- ps_hh_9198.df[-ps_dropped,]
+rownames(ps_hh_9198.df) <- NULL
+
+#Merge to original data frame by nh
+hh_9198.df <- read.csv("Data/hh_9198.csv")
+psm_hh_9198.df <- right_join(hh_9198.df, ps_hh_9198.df, by = "nh")
+
+# Re-estimate baseline model with matched data set
+
+psm_hh_9198.df <- mutate(psm_hh_9198.df, lexptot = log(1 + exptot))
+psm_hh_9198.df <- mutate(psm_hh_9198.df, lnland = log(1 + hhland / 100))
+psm_hh_9198.df <- mutate(psm_hh_9198.df, dfmfd1=ifelse(dfmfd == 1 & year == 1, 1, 0))
+psm_hh_9198.df <- group_by(psm_hh_9198.df,nh) %>%
+  mutate(dfmfd98 = max(dfmfd1))
+psm_hh_9198.df <- mutate(psm_hh_9198.df, dfmfdyr = dfmfd98*year)
+psm_hh_9198.df <- ungroup(psm_hh_9198.df)
+
+# Re-estimate Basic Model
+
+lm <- lm(lexptot ~ year + dfmfd98 + dfmfdyr, data = psm_hh_9198.df)
+summary(lm)
+
+# Create Analytical Weights
+
+psm_hh_9198.df$a_weight <- 1
+psm_hh_9198.df$a_weight <- ifelse(psm_hh_9198.df$dfmfd == 0, psm_hh_9198.df$psm/(1-psm_hh_9198.df$psm), 1)
+
+# Re-estimate with analytical weights
+
+lm <- lm(lexptot ~ year + dfmfd98 + dfmfdyr, data = psm_hh_9198.df, weights = a_weight)
+summary(lm)
 
