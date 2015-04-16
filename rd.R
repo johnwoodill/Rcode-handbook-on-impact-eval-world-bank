@@ -9,7 +9,6 @@
 ###################################################
 
 library(dplyr)
-library(rdd)
 library(ggplot2)
 
 setwd("/home/john/Dropbox/UHM/Classes/Econ 610 - Economic Development/Problem Sets")
@@ -22,8 +21,9 @@ hh_98.df <- read.csv("Data/hh_98.csv")
 
 hh_98.df <- filter(hh_98.df, hhland <= 500)
 
-hh_98.df <- filter(hh_98.df, hhland < 50 & dmmfd == 0 | dfmfd == 0)
-hh_98.df <- filter(hh_98.df, hhland >= 50 & dmmfd == 1 | dfmfd == 1)
+# Because of package design, no need to drop because sharp is determined
+#hh_98.df <- filter(hh_98.df, hhland >= 50 & dmmfd == 0 | dfmfd == 0)
+#hh_98.df <- filter(hh_98.df, hhland < 50 & dmmfd == 1 | dfmfd == 1)
 
 hh_98.df$lexptot <- log(1+hh_98.df$exptot) 
 hh_98.df$lnland <- log(1+hh_98.df$hhland/100)
@@ -31,8 +31,6 @@ hh_98.df$lnland <- log(1+hh_98.df$hhland/100)
 # Probability distribution for treated males and females 
 males_hh_98.df <- filter(hh_98.df, dmmfd == 1 | dmmfd == 0)
 males_hh_98.df <- filter(hh_98.df, dfmfd == 1 )
-plot(density(hh_98.df$dfmfd))
-plot(density(hh_98.df$dmmfd))
 
 setwd("HW5/")
 ggplot(hh_98.df, aes(x=dmmfd)) + geom_density() + ggtitle("Males Density of Treatment") + xlim(-.5,1.5)
@@ -40,29 +38,36 @@ ggsave("male_density.png", width = 3, height = 3)
 ggplot(hh_98.df, aes(x=dfmfd)) + geom_density() + ggtitle("Females Density of Treatment") + xlim(-.5,1.5)
 ggsave("female_density.png", width = 3, height = 3)  
 
-# Local polynomial regressions above and below 50 hhland
+#RDDtools
 
-rd.lm <- RDestimate(lexptot ~ hhland, data = hh_98.df, cutpoint = 50)
-a <- rd.lm$model
-plot(rd.lm)
+library(RDDtools)
 
-# Polynomial
-rd1 <- filter(hh_98.df, hhland < 50)
-rd1.lm <- lm(lexptot ~ hhland, data = rd1)
-rd1$fit <- rd1.lm$fitted.values
+# Setup
+data <- RDDdata(y = hh_98.df$lexptot, x = hh_98.df$hhland, cutpoint = 50)
 
-rd2 <- filter(hh_98.df, hhland >= 50)
-rd2.lm <- lm(lexptot ~ hhland, data = rd2)
-rd2$fit <- rd2.lm$fitted.values
+# Local linear polynomial regression (Imbens and Kalyanaraman 2012 bandwidth)
+data2 <- RDDbw_IK(data)
+rd2.lm <- RDDreg_np(RDDobject = data, bw = data2)
+print(rd2.lm)
+plot(rd2.lm, xlab = "", ylab = "", cex = .2)
+abline(v = 50)
 
-plot <- bind_rows(rd1, rd2)
-ggplot(plot, aes(x=fit, y=hhland)) + geom_point()
-ggplot(rd1, aes(x=fit, y=hhland)) + geom_point()
+# Parametric 2nd order polynomial
+rd.lm <- RDDreg_lm(RDDobject = data, order = 2)
+plot(rd.lm, xlab = "", ylab = "", cex = .2)
+abline(v = 50)
 
-x<-runif(1000,-1,1)
-cov<-rnorm(1000)
-y<-3+2*x+3*cov+10*(x>=0)+rnorm(1000)
-RDestimate(y~x)
-# Efficiency gains can be made by including covariates
-a <- RDestimate(y~x|cov)
-plot(a)
+# Bootstrapping
+library(boot)
+
+# Function to run RDDreg_lm for bootstrapping
+rd <- function(data, i) {
+  d <- data[i, ]
+  r <- RDDdata(y = d$lexptot, x = d$hhland, cutpoint = 50)
+  d2 <- RDDbw_IK(r)
+  fit <- RDDreg_np(RDDobject = r, bw = d2)
+  return(fit$coefficients)
+}
+
+boot(hh_98.df, statistic = rd, 1000)
+
