@@ -10,6 +10,6 @@ This repository contains replication code for the exercises in the handbook. The
 
 `psm.R` - Propensity Score Matching
 
-`random.R` - Randomized Control Trails
+`random.R` - Randomized Control Trials
 
 `rd.R` - Regression Discontinuity
